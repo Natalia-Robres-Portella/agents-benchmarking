@@ -1,56 +1,57 @@
 # Agent Benchmark Suite
 
-Un framework de investigación para evaluar y comparar agentes LLM de forma rigurosa, reproducible y extensible.
+A research framework for evaluating and comparing LLM agents in a rigorous, reproducible, and extensible way.
 
 ---
 
-## Índice
+## Table of contents
 
-1. [¿Para qué sirve?](#1-para-qué-sirve)
-2. [¿Por qué se hace?](#2-por-qué-se-hace)
-3. [¿Qué compara?](#3-qué-compara)
-4. [¿Cómo funciona por dentro?](#4-cómo-funciona-por-dentro)
-5. [¿De dónde saca los datos?](#5-de-dónde-saca-los-datos)
-6. [¿Cómo se evalúa?](#6-cómo-se-evalúa)
-7. [Estructura de carpetas](#7-estructura-de-carpetas)
-8. [Instalación](#8-instalación)
-9. [Cómo ejecutar un experimento](#9-cómo-ejecutar-un-experimento)
-10. [Qué hay que rellenar / configurar](#10-qué-hay-que-rellenar--configurar)
-11. [Referencia completa de configuración YAML](#11-referencia-completa-de-configuración-yaml)
-12. [Qué se guarda en los resultados](#12-qué-se-guarda-en-los-resultados)
-13. [Cómo añadir cosas nuevas](#13-cómo-añadir-cosas-nuevas)
+1. [What is it for?](#1-what-is-it-for)
+2. [Why does it exist?](#2-why-does-it-exist)
+3. [What does it compare?](#3-what-does-it-compare)
+4. [How does it work internally?](#4-how-does-it-work-internally)
+5. [Where does the data come from?](#5-where-does-the-data-come-from)
+6. [How is evaluation done?](#6-how-is-evaluation-done)
+7. [Folder structure](#7-folder-structure)
+8. [Installation](#8-installation)
+9. [How to run an experiment](#9-how-to-run-an-experiment)
+10. [Configuration checklist](#10-configuration-checklist)
+11. [Full YAML configuration reference](#11-full-yaml-configuration-reference)
+12. [What is saved in the results](#12-what-is-saved-in-the-results)
+13. [How to extend the codebase](#13-how-to-extend-the-codebase)
 14. [Tests](#14-tests)
-15. [Papers de referencia](#15-papers-de-referencia)
+15. [Reference papers](#15-reference-papers)
 
 ---
 
-## 1. ¿Para qué sirve?
+## 1. What is it for?
 
-Este proyecto permite **ejecutar experimentos controlados sobre agentes LLM** y medir objetivamente cómo se comportan en tareas de razonamiento y búsqueda de información.
+This project lets you **run controlled experiments on LLM agents** and measure objectively how they behave on reasoning and information-seeking tasks.
 
-Un "agente LLM" es un sistema que usa un modelo de lenguaje (GPT-4o, Claude, etc.) no sólo para generar texto, sino para **razonar, decidir qué herramientas usar, ejecutarlas, observar el resultado y repetir** hasta llegar a una respuesta. Este framework responde preguntas como:
+An “LLM agent” is a system that uses a language model (GPT-4o, Claude, etc.) not only to generate text, but to **reason, choose tools, execute them, observe outcomes, and repeat** until it produces an answer. This framework helps answer questions such as:
 
-- ¿ReAct es mejor que un agente sin herramientas en HotPotQA?
-- ¿Cuántos pasos necesita el agente de media para responder correctamente?
-- ¿Qué porcentaje de llamadas a herramientas tienen argumentos válidos?
-- ¿Cuántos tokens consume cada estrategia por tarea?
-- ¿El agente es capaz de recuperarse cuando una herramienta falla?
+- Is ReAct better than a tool-free agent on HotPotQA?
+- How many steps does the agent need on average to answer correctly?
+- What fraction of tool calls have valid arguments?
+- How many tokens does each strategy consume per task?
+- Can the agent recover when a tool fails?
 
 ---
 
-## 2. ¿Por qué se hace?
+## 2. Why does it exist?
 
-La mayoría de los benchmarks de LLMs evalúan el modelo directamente (¿qué tan bien responde a una pregunta?). Este proyecto evalúa el **sistema agente completo**: estrategia de razonamiento + herramientas + memoria + modelo.
+Most LLM benchmarks evaluate the model in isolation (how well does it answer a question?). This project evaluates the **full agent system**: reasoning strategy + tools + memory + model.
 
-### Problemas que resuelve
+### Problems it addresses
 
-**Reproducibilidad.** Sin fijar la semilla aleatoria, el mismo experimento da resultados distintos en cada ejecución. Aquí cada run tiene un `config_hash` (SHA-256 del YAML de configuración) que se incrusta en cada trajectory, garantizando que dos runs con el mismo hash son idénticos.
+**Reproducibility.** Without fixing the random seed, the same experiment can yield different results each run. Every run has a `config_hash` (SHA-256 of the configuration YAML) embedded in each trajectory, so two runs with the same hash are comparable.
 
-**Comparación justa.** Para comparar ReAct vs. Reflexion vs. Direct, todos deben correr con el mismo conjunto de tareas (misma semilla), el mismo modelo y las mismas métricas. El framework lo garantiza por diseño.
+**Fair comparison.** To compare ReAct vs. Reflexion vs. Direct, all runs must use the same task set (same seed), same model, and same metrics. The framework enforces that by design.
 
-**Trazabilidad completa.** Cada paso del agente — qué pensó, qué herramienta llamó, con qué argumentos, qué respuesta recibió, cuántos tokens gastó, cuánto tardó — se guarda en JSONL. Si algo falla, se puede reproducir exactamente lo que pasó.
+**Full traceability.** Every agent step—what it thought, which tool it called, with which arguments, what it observed, token usage, latency—is logged as JSONL. Failures can be replayed and inspected.
 
-**Base académica.** Cada decisión de diseño está justificada con papers:
+**Academic grounding.** Design choices map to papers:
+
 - ReAct (Yao et al., ICLR 2023)
 - Reflexion (Shinn et al., NeurIPS 2023)
 - Pass@k (Chen et al., 2021 / Shinn et al., 2023)
@@ -59,283 +60,282 @@ La mayoría de los benchmarks de LLMs evalúan el modelo directamente (¿qué ta
 
 ---
 
-## 3. ¿Qué compara?
+## 3. What does it compare?
 
-El framework compara agentes a lo largo de **cuatro ejes independientes** que se pueden combinar libremente:
+The framework compares agents along **four independent axes** you can mix freely:
 
-### Eje 1 — Estrategia de planificación
+### Axis 1 — Planning strategy
 
-| Estrategia | Estado | Descripción |
+| Strategy | Status | Description |
 |---|---|---|
-| `direct` | ✅ Implementado | Sin herramientas. El modelo responde directamente. Baseline. |
-| `react` | ✅ Implementado | Thought → Action → Observation en bucle (Yao et al., 2023). |
-| `reflexion` | 🔜 Pendiente | ReAct + reflexión verbal entre trials (Shinn et al., 2023). |
-| `plan_execute` | 🔜 Pendiente | Genera un plan completo antes de ejecutar (Wang et al., 2023). |
-| `tot` | 🔜 Pendiente | Tree of Thoughts: explora múltiples ramas de razonamiento (Yao et al., 2023). |
+| `direct` | Implemented | No tools. The model answers directly. Baseline. |
+| `react` | Implemented | Thought → Action → Observation loop (Yao et al., 2023). |
+| `reflexion` | Planned | ReAct + verbal reflection across trials (Shinn et al., 2023). |
+| `plan_execute` | Planned | Full plan before execution (Wang et al., 2023). |
+| `tot` | Planned | Tree of Thoughts: multiple reasoning branches (Yao et al., 2023). |
 
-### Eje 2 — Tipo de memoria
+### Axis 2 — Memory type
 
-| Tipo | Descripción |
+| Type | Description |
 |---|---|
-| `no_memory` | Sin memoria. Cada trial empieza desde cero. |
-| `window_buffer` | Mantiene los últimos N pasos en contexto. |
-| `episodic` | Buffer de reflexiones verbales (necesario para Reflexion). Persiste entre trials de la misma tarea; se borra entre tareas. |
-| `vector_store` | (Avanzado) Retrieval con embeddings (requiere ChromaDB). |
+| `no_memory` | No memory. Each trial starts from scratch. |
+| `window_buffer` | Keeps the last N steps in context. |
+| `episodic` | Buffer of verbal reflections (for Reflexion). Persists across trials on the same task; cleared between tasks. |
+| `vector_store` | (Advanced) Embedding retrieval (requires ChromaDB). |
 
-### Eje 3 — Modelo LLM
+### Axis 3 — LLM model
 
-Cualquier modelo de OpenAI (GPT-4o, GPT-4o-mini…) o Anthropic (Claude Opus, Sonnet…). Se configura en el YAML.
+Any OpenAI model (GPT-4o, GPT-4o-mini, …) or Anthropic (Claude Opus, Sonnet, …). Configured in YAML.
 
-### Eje 4 — Herramientas disponibles
+### Axis 4 — Available tools
 
-| Herramienta | Descripción |
+| Tool | Description |
 |---|---|
-| `search` | Búsqueda web. En modo offline usa el fixture local; en modo live usa DuckDuckGo. |
-| `calculator` | Evaluador de expresiones matemáticas seguro (allowlist de operadores). |
-| `finish` | Señal de terminación. El agente la llama cuando tiene la respuesta final. |
+| `search` | Search. Official benchmark runs use **MockSearchTool** (local JSON fixture, reproducible). `LiveSearchTool` (DuckDuckGo) exists for exploratory use only. |
+| `calculator` | Safe math expression evaluator (operator allowlist). |
+| `finish` | Episode termination. The agent calls it when it has the final answer. |
 
 ---
 
-## 4. ¿Cómo funciona por dentro?
+## 4. How does it work internally?
 
-El flujo completo de un experimento:
+End-to-end experiment flow:
 
 ```
 run_experiment.py
     └── ExperimentOrchestrator.run()
             │
-            ├── 1. seed_everything(seed)          ← reproducibilidad
-            ├── 2. Crea results/{run_id}/
-            ├── 3. Snapshot de config.yaml
+            ├── 1. seed_everything(seed)          ← reproducibility
+            ├── 2. Creates results/{run_id}/
+            ├── 3. Snapshot config.yaml
             │
-            ├── 4. Construye componentes
-            │       ├── Agent (estrategia + memoria + LLM + herramientas)
-            │       ├── TaskLoader (carga las tareas del dataset)
-            │       ├── TraceLogger (escribe JSONL por pasos)
-            │       ├── ExecutionEngine (loop de pasos)
-            │       ├── EvaluationModule (métricas)
-            │       └── ReportGenerator (escribe resultados)
+            ├── 4. Builds components
+            │       ├── Agent (strategy + memory + LLM + tools)
+            │       ├── TaskLoader (loads dataset tasks)
+            │       ├── TraceLogger (writes JSONL per step)
+            │       ├── ExecutionEngine (step loop)
+            │       ├── EvaluationModule (metrics)
+            │       └── ReportGenerator (writes outputs)
             │
-            ├── 5. Para cada tarea:
+            ├── 5. For each task:
             │       └── ExecutionEngine.run(task)
             │               │
-            │               └── Para cada trial (n_trials veces):
-            │                       ├── post_episode_hook() ← Reflexion escribe aquí
+            │               └── For each trial (n_trials times):
+            │                       ├── post_episode_hook() ← Reflexion writes here
             │                       ├── agent.reset(seed)
-            │                       └── Loop hasta max_steps:
+            │                       └── Loop until max_steps:
             │                               ├── agent.act(state)   → Action
             │                               ├── tools.execute()    → ToolResult
             │                               ├── agent.observe(obs)
             │                               └── logger.log_step()
             │
             ├── 6. EvaluationModule.compute_all()
-            │       ├── Stage 1: validator.validate() → score por trajectory
-            │       └── Stage 2: metric.compute()     → MetricResult por métrica
+            │       ├── Stage 1: validator.validate() → score per trajectory
+            │       └── Stage 2: metric.compute()     → MetricResult per metric
             │
             └── 7. ReportGenerator.emit()
                     ├── metrics.json
                     └── report.md
 ```
 
-### El agente y la estrategia
+### Agent and strategy
 
-La `PlanningStrategy` es **sin estado** — es un transformador puro de (estado, memoria, herramientas) → prompt → acción. Toda la lógica de cómo razonar está aquí.
+`PlanningStrategy` is **stateless**—a pure transform from (state, memory, tools) → prompt → action. All reasoning-format logic lives here.
 
-El `BaseAgent` es **con estado** — mantiene la memoria y conecta la estrategia con el LLM y las herramientas. Su `agent_id` es una huella legible: `"react__no_memory__gpt-4o"`.
+`BaseAgent` is **stateful**—it holds memory and wires strategy to LLM and tools. Its `agent_id` is a readable fingerprint, e.g. `"react__no_memory__gpt-4o"`.
 
-### El bucle ReAct
+### The ReAct loop
 
-En cada paso:
+Each step:
 
 ```
-Thought: Necesito buscar quién escribió Hamlet.
+Thought: I need to search for who wrote Hamlet.
 Action: search
-Action Input: {"query": "autor de Hamlet"}
-                    ↓ (el engine ejecuta la herramienta)
-Observation: Hamlet fue escrito por William Shakespeare...
-                    ↓ (siguiente iteración)
-Thought: Ya sé la respuesta.
+Action Input: {"query": "who wrote Hamlet"}
+                    ↓ (engine runs the tool)
+Observation: Hamlet was written by William Shakespeare...
+                    ↓ (next iteration)
+Thought: I have the answer.
 Action: finish
 Action Input: {"answer": "William Shakespeare"}
 ```
 
-El stop sequence `"\nObservation:"` impide que el modelo alucine su propia observación — el engine la suministra con el resultado real de la herramienta.
+The stop sequence `"\nObservation:"` prevents the model from hallucinating its own observation—the engine supplies the real tool output.
 
 ---
 
-## 5. ¿De dónde saca los datos?
+## 5. Where does the data come from?
 
-### HotPotQA (dataset principal implementado)
+### HotPotQA (primary implemented dataset)
 
-HotPotQA es un dataset de preguntas de razonamiento multi-hop: para responderlas hay que combinar información de múltiples fuentes. Ejemplo:
+HotPotQA is a multi-hop reasoning QA benchmark: answering often requires combining evidence from multiple sources. Example:
 
-> *"¿En qué año nació el fundador de la empresa que fabricó el primer iPhone?"*
+> *“In what year was the founder of the company that made the first iPhone born?”*
 
-El loader intenta descargarlo automáticamente de HuggingFace Hub:
+The loader downloads from Hugging Face Hub when online:
 
 ```python
 load_dataset("hotpot_qa", "fullwiki", split="validation")
 ```
 
-**Si no hay conexión a internet** (CI, entorno offline), usa automáticamente el fixture local en `fixtures/hotpotqa_sample.json` (20 preguntas de ejemplo incluidas en el repo).
+**Without internet** (CI, offline), it automatically falls back to the local fixture `fixtures/hotpotqa_sample.json` (20 example questions shipped in the repo).
 
-Cada tarea cargada tiene esta estructura interna:
+Each loaded task has this internal shape:
 
 ```python
 TaskInstance(
     task_id="hotpotqa_5abc123",
-    input="¿Cuál es la capital de Francia?",   # la pregunta para el agente
-    gold="París",                               # respuesta correcta para evaluar
+    input="What is the capital of France?",   # question shown to the agent
+    gold="Paris",                             # reference answer for scoring
     metadata={"type": "bridge", "level": "easy"}
 )
 ```
 
-### Añadir otros datasets
+### Adding other datasets
 
-Implementar `TaskLoader` en `src/tasks/loaders/` y registrar en `src/tasks/loaders/__init__.py`. Ver sección [13. Cómo añadir cosas nuevas](#13-cómo-añadir-cosas-nuevas).
-
----
-
-## 6. ¿Cómo se evalúa?
-
-La evaluación tiene dos etapas.
-
-### Etapa 1 — Puntuación de cada trajectory (Validator)
-
-Compara la respuesta final del agente con la respuesta correcta (`gold`):
-
-| Validator | Cuándo usarlo | Cómo funciona |
-|---|---|---|
-| `exact_match` | Respuestas con formato muy estricto | Case-insensitive string equality. 1.0 o 0.0. |
-| `fuzzy_match` | Preguntas abiertas (HotPotQA, etc.) | Token-level F1 con stop words. Igual que SQuAD. Permite "William Shakespeare" == "Shakespeare". |
-| `llm_judge` | Generación larga, múltiples respuestas válidas | LLM externo puntúa de 0–10. Con mitigación de sesgos (ver abajo). |
-
-**Resultado:** cada `Trajectory` recibe un `score` ∈ [0,1] y un flag `success` (True si score ≥ 1.0).
-
-### Etapa 2 — Métricas agregadas (Metrics)
-
-Se calculan sobre el conjunto completo de trajectories del run:
-
-| Métrica | Valor principal | Desglose |
-|---|---|---|
-| `success_rate` | Fracción de tareas donde al menos 1 trial tuvo éxito | Por nivel de dificultad (easy/medium/hard) |
-| `pass_at_k` | P(al menos 1 de k trials aleatorios tiene éxito) — fórmula combinatoria exacta | pass@1, pass@3, pass@5 |
-| `tokens_per_task` | Media de tokens totales por trajectory | — |
-| `step_count` | Media de pasos ReAct por trajectory | Desglose success vs. failure |
-| `tool_accuracy` | Fracción de llamadas a herramientas con argumentos válidos | error_rate, calls_per_episode, por herramienta |
-| `failure_recovery` | Fracción de episodios con errores que aun así tuvieron éxito | episodes_with_errors, recovered |
-| `latency` | P50 de latencia total por episodio (ms) | p50, p95, mean |
-
-### El juez LLM (`llm_judge`) y mitigación de sesgos
-
-Cuando se usa `validator: "llm_judge"`, cada predicción se evalúa con **4 prompts × n_samples llamadas independientes**:
-
-- **2 perspectivas:** precisión factual + equivalencia semántica
-- **2 órdenes:** predicción primero / gold primero → cancela el sesgo posicional
-- **temperature > 0:** mide la varianza entre llamadas
-- **Agregación:** media de todos los scores; si std_dev > 0.15, se emite WARNING de baja confianza
-
-Para una explicación completa de los sesgos y mitigaciones, ver [docs/llm_judge_notes.md](docs/llm_judge_notes.md).
+Implement a `TaskLoader` under `src/tasks/loaders/` and register it in `src/tasks/loaders/__init__.py`. See [13. How to extend the codebase](#13-how-to-extend-the-codebase).
 
 ---
 
-## 7. Estructura de carpetas
+## 6. How is evaluation done?
+
+Evaluation has two stages.
+
+### Stage 1 — Per-trajectory scoring (Validator)
+
+Compares the agent’s final answer to the reference (`gold`):
+
+| Validator | When to use | How it works |
+|---|---|---|
+| `exact_match` | Very strict string answers | Case-insensitive string equality. 1.0 or 0.0. |
+| `fuzzy_match` | Open-ended QA (HotPotQA, etc.) | Token-level F1 with stop words (SQuAD-style). Allows “William Shakespeare” vs “Shakespeare” with partial credit; **`success` is True only when the F1 score is exactly 1.0.** |
+| `llm_judge` | Long-form answers, many valid phrasings | External LLM scores 0–10 with bias mitigations (below). |
+
+**Outcome:** each `Trajectory` gets a `score` ∈ [0,1] and a `success` flag (True iff score ≥ 1.0 with the current implementation).
+
+### Stage 2 — Aggregate metrics (Metrics)
+
+Computed over all trajectories in the run:
+
+| Metric | Main value | Breakdown |
+|---|---|---|
+| `success_rate` | Fraction of tasks where at least one trial succeeded | By difficulty (easy/medium/hard) |
+| `pass_at_k` | P(at least one of k random trials succeeds)—exact combinatorial formula | pass@1, pass@3, pass@5 |
+| `tokens_per_task` | Mean total tokens per trajectory | — |
+| `step_count` | Mean ReAct steps per trajectory | success vs. failure |
+| `tool_accuracy` | Fraction of tool calls with valid arguments | error_rate, calls_per_episode, per tool |
+| `failure_recovery` | Fraction of episodes with errors that still succeeded | episodes_with_errors, recovered |
+| `latency` | Total latency per episode (ms) | p50, p95, mean (when registered under the name your config uses) |
+
+### LLM judge (`llm_judge`) and bias mitigation
+
+With `validator: "llm_judge"`, each prediction is scored with **4 prompt templates × n_samples independent calls**:
+
+- **Two perspectives:** factual accuracy + semantic equivalence  
+- **Two orderings:** prediction-first / gold-first → reduces positional bias  
+- **temperature > 0:** measures variance across calls  
+- **Aggregation:** mean score; if std_dev > 0.15, a low-confidence WARNING is logged  
+
+See [docs/llm_judge_notes.md](docs/llm_judge_notes.md) for biases and mitigations in detail.
+
+---
+
+## 7. Folder structure
 
 ```
 agents_benchmarking/
 │
-├── run_experiment.py          ← PUNTO DE ENTRADA. CLI para lanzar experimentos.
-├── requirements.txt           ← Dependencias MVP (instalar primero).
-├── requirements-advanced.txt  ← Dependencias opcionales (Anthropic, ChromaDB, etc.).
-├── pyproject.toml             ← Config de pytest y ruff.
-├── .env.example               ← Plantilla de variables de entorno (API keys).
+├── run_experiment.py          ← ENTRY POINT. CLI to launch experiments.
+├── requirements.txt           ← MVP dependencies (install first).
+├── requirements-advanced.txt  ← Optional deps (Anthropic, ChromaDB, etc.).
+├── pyproject.toml             ← pytest and ruff config.
+├── .env.example               ← Environment variable template (API keys).
 │
-├── configs/                   ← CONFIGURACIÓN DE EXPERIMENTOS
-│   ├── base_config.yaml       ← Valores por defecto. Todo experimento hereda de aquí.
+├── configs/                   ← EXPERIMENT CONFIGURATION
+│   ├── base_config.yaml       ← Defaults. Every experiment inherits from this.
 │   └── experiments/
-│       └── react_hotpotqa.yaml ← Experimento concreto. Sobreescribe los defaults.
+│       └── react_hotpotqa.yaml ← Concrete experiment. Overrides defaults.
 │
-├── fixtures/                  ← DATOS OFFLINE para CI y desarrollo sin internet
-│   ├── hotpotqa_sample.json   ← 20 preguntas de HotPotQA. Fallback automático.
-│   └── search_responses.json  ← Respuestas de búsqueda simuladas (MockSearchTool).
+├── fixtures/                  ← OFFLINE DATA for CI and development without internet
+│   ├── hotpotqa_sample.json   ← 20 HotPotQA-style items. Automatic fallback.
+│   └── search_responses.json  ← Simulated search hits (MockSearchTool).
 │
-├── results/                   ← RESULTADOS DE EXPERIMENTOS (generado automáticamente)
-│   └── {run_id}/              ← Una carpeta por run. Nombre: "{id}__{timestamp}__{hash}"
-│       ├── config.yaml        ← Snapshot exacto del config usado.
-│       ├── metrics.json       ← Métricas en formato machine-readable.
-│       ├── report.md          ← Tabla de métricas en Markdown (legible en GitHub).
-│       ├── trajectories.jsonl ← Una línea JSON por trajectory completada.
-│       └── traces.jsonl       ← Una línea JSON por paso de agente (si save_traces=true).
+├── results/                   ← EXPERIMENT OUTPUT (created automatically)
+│   └── {run_id}/              ← One folder per run: "{id}__{timestamp}__{hash}"
+│       ├── config.yaml        ← Exact config snapshot.
+│       ├── metrics.json       ← Machine-readable metrics.
+│       ├── report.md          ← Markdown metric table (GitHub-friendly).
+│       ├── trajectories.jsonl ← One JSON line per completed trajectory.
+│       └── traces.jsonl       ← One JSON line per agent step (if save_traces=true).
 │
 ├── docs/
-│   └── llm_judge_notes.md     ← Limitaciones y mitigaciones del juez LLM.
+│   └── llm_judge_notes.md     ← LLM judge limitations and mitigations.
 │
-├── src/                       ← TODO EL CÓDIGO FUENTE
+├── src/                       ← ALL SOURCE CODE
 │   │
-│   ├── schema.py              ← Modelos de datos centrales (Pydantic). IMPORTADO POR TODOS.
-│   │                            Define: Action, Observation, Step, Trajectory,
+│   ├── schema.py              ← Core Pydantic models. IMPORTED EVERYWHERE.
+│   │                            Defines: Action, Observation, Step, Trajectory,
 │   │                            TaskInstance, AgentState, MetricResult, ToolResult.
 │   │
-│   ├── config.py              ← Modelos de configuración + load_config() + config_hash.
-│   │                            Define: ExperimentConfig, AgentConfig, LLMConfig,
+│   ├── config.py              ← Config models + load_config() + config_hash.
+│   │                            Defines: ExperimentConfig, AgentConfig, LLMConfig,
 │   │                            MemoryConfig, ToolConfig, EvaluationConfig, etc.
 │   │
-│   ├── utils.py               ← Utilidades compartidas: seed_everything(), make_run_id(),
+│   ├── utils.py               ← Shared helpers: seed_everything(), make_run_id(),
 │   │                            configure_logging().
 │   │
-│   ├── orchestrator.py        ← ExperimentOrchestrator. Coordina todo el ciclo de vida.
+│   ├── orchestrator.py        ← ExperimentOrchestrator. Full lifecycle coordinator.
 │   │
-│   ├── execution_engine.py    ← ExecutionEngine. El bucle de pasos act→observe→log.
+│   ├── execution_engine.py    ← ExecutionEngine. act→observe→log step loop.
 │   │
-│   ├── trace_logger.py        ← TraceLogger. Escribe traces.jsonl y trajectories.jsonl.
-│   │                            Flush después de cada paso → crash-safe.
+│   ├── trace_logger.py        ← TraceLogger. Writes traces.jsonl and trajectories.jsonl.
+│   │                            Flush after each step → crash-safe.
 │   │
 │   ├── agents/
-│   │   ├── base.py            ← Agent (ABC) + BaseAgent (concreto).
-│   │   │                        BaseAgent conecta: estrategia + memoria + LLM + herramientas.
+│   │   ├── base.py            ← Agent (ABC) + BaseAgent (concrete).
+│   │   │                        BaseAgent wires: strategy + memory + LLM + tools.
 │   │   └── factory.py         ← build_agent(config) → Agent.
 │   │
 │   ├── strategies/
-│   │   ├── base.py            ← PlanningStrategy (ABC). Contrato: build_prompt + parse_response.
-│   │   ├── direct.py          ← Respuesta directa sin herramientas. Baseline.
-│   │   ├── react.py           ← ReAct completo con parser de Thought/Action/Action Input.
+│   │   ├── base.py            ← PlanningStrategy (ABC). Contract: build_prompt + parse_response.
+│   │   ├── direct.py          ← Direct answer, no tools. Baseline.
+│   │   ├── react.py          ← Full ReAct with Thought/Action/Action Input parser.
 │   │   └── factory.py         ← build_strategy(name) → PlanningStrategy.
 │   │
 │   ├── memory/
-│   │   ├── base.py            ← MemoryModule (ABC). Contrato: read/write/reset.
-│   │   ├── no_memory.py       ← Sin memoria. read() → []. No-op en write/reset.
-│   │   ├── window_buffer.py   ← Últimos N pasos en un deque.
-│   │   ├── episodic.py        ← Buffer de reflexiones verbales para Reflexion.
-│   │   │                        reset() es no-op. hard_reset() borra entre tareas.
+│   │   ├── base.py            ← MemoryModule (ABC). Contract: read/write/reset.
+│   │   ├── no_memory.py       ← No memory. read() → []. No-op on write/reset.
+│   │   ├── window_buffer.py   ← Last N steps in a deque.
+│   │   ├── episodic.py        ← Verbal reflection buffer for Reflexion.
+│   │   │                        reset() is no-op. hard_reset() clears between tasks.
 │   │   └── factory.py         ← build_memory(config) → MemoryModule.
 │   │
 │   ├── llm/
 │   │   ├── base.py            ← LLMBackend (ABC) + LLMResponse.
-│   │   ├── openai_backend.py  ← OpenAIBackend con reintentos exponenciales (tenacity).
+│   │   ├── openai_backend.py  ← OpenAIBackend with exponential retries (tenacity).
 │   │   └── factory.py         ← build_llm_backend(config) → LLMBackend.
 │   │
 │   ├── tools/
 │   │   ├── base.py            ← BaseTool (ABC) + ToolRegistry.
-│   │   │                        ToolRegistry.validate_and_execute() es el único punto
-│   │   │                        de entrada — los errores se convierten en ToolResult,
-│   │   │                        nunca en excepciones.
-│   │   ├── finish.py          ← FinishTool. Señal de terminación del episodio.
-│   │   ├── calculator.py      ← Calculadora segura con allowlist de operadores.
+│   │   │                        ToolRegistry.validate_and_execute() is the single
+│   │   │                        entry point—errors become ToolResult, not exceptions.
+│   │   ├── finish.py          ← FinishTool. Episode termination signal.
+│   │   ├── calculator.py      ← Safe calculator with operator allowlist.
 │   │   ├── search.py          ← MockSearchTool (offline) + LiveSearchTool (DuckDuckGo).
 │   │   └── factory.py         ← build_tool_registry(tool_configs) → ToolRegistry.
 │   │
 │   ├── tasks/
 │   │   ├── base.py            ← TaskLoader (ABC) + TaskValidator (ABC) + TaskRegistry.
 │   │   └── loaders/
-│   │       └── hotpotqa.py    ← HotPotQALoader. HuggingFace Hub + fallback a fixture.
+│   │       └── hotpotqa.py    ← HotPotQALoader. Hugging Face Hub + fixture fallback.
 │   │
 │   ├── evaluation/
-│   │   ├── module.py          ← EvaluationModule. Orquesta Stage 1 y Stage 2.
+│   │   ├── module.py          ← EvaluationModule. Orchestrates Stage 1 and Stage 2.
 │   │   ├── validators/
 │   │   │   ├── base.py        ← ValidatorRegistry.
-│   │   │   ├── exact_match.py ← Igualdad exacta case-insensitive.
-│   │   │   ├── fuzzy_match.py ← Token F1 con stop words (estilo SQuAD).
-│   │   │   └── llm_judge.py   ← LLMJudgeValidator con mitigación de sesgos.
+│   │   │   ├── exact_match.py ← Case-insensitive exact equality.
+│   │   │   ├── fuzzy_match.py ← Token F1 with stop words (SQuAD-style).
+│   │   │   └── llm_judge.py   ← LLMJudgeValidator with bias mitigations.
 │   │   └── metrics/
 │   │       ├── base.py        ← Metric (ABC) + MetricRegistry.
 │   │       ├── success_rate.py
@@ -347,12 +347,12 @@ agents_benchmarking/
 │   │       └── latency.py
 │   │
 │   └── reporting/
-│       ├── aggregator.py      ← ResultAggregator. Agrupa trajectories por task_id.
-│       └── report_generator.py ← Escribe metrics.json y report.md.
+│       ├── aggregator.py      ← ResultAggregator. Groups trajectories by task_id.
+│       └── report_generator.py ← Writes metrics.json and report.md.
 │
 └── tests/
     ├── conftest.py
-    ├── unit/                  ← Tests unitarios (sin LLM real, sin red)
+    ├── unit/                  ← Unit tests (no real LLM, no network)
     │   ├── test_schema.py
     │   ├── test_config.py
     │   ├── test_agent.py
@@ -365,67 +365,67 @@ agents_benchmarking/
     │   ├── test_metrics_phase5.py
     │   └── test_llm_judge.py
     └── integration/
-        └── test_react_smoke.py ← Pipeline completo con LLM mockeado.
+        └── test_react_smoke.py ← Full pipeline with mocked LLM.
 ```
 
 ---
 
-## 8. Instalación
+## 8. Installation
 
-### Requisitos previos
+### Prerequisites
 
 - Python 3.11+
-- Una API key de OpenAI (mínimo) o Anthropic (opcional)
+- An OpenAI API key (minimum) or Anthropic (optional)
 
-### Pasos
+### Steps
 
 ```bash
-# 1. Clonar el repositorio
+# 1. Clone the repository
 git clone <repo-url>
 cd agents_benchmarking
 
-# 2. Crear entorno virtual (recomendado)
+# 2. Create a virtual environment (recommended)
 python3 -m venv .venv
 source .venv/bin/activate       # Linux/macOS
 # .venv\Scripts\activate        # Windows
 
-# 3. Instalar dependencias MVP
+# 3. Install MVP dependencies
 pip install -r requirements.txt
 
-# 4. (Opcional) Dependencias avanzadas: Anthropic, ChromaDB, ALFWorld...
+# 4. (Optional) Advanced deps: Anthropic, ChromaDB, ALFWorld...
 pip install -r requirements-advanced.txt
 
-# 5. Configurar API keys
+# 5. Configure API keys
 cp .env.example .env
-# Editar .env y poner las keys reales
+# Edit .env and add real keys
 ```
 
-### Contenido de `.env`
+### `.env` contents
 
 ```bash
-OPENAI_API_KEY=sk-...       # Obligatorio para cualquier experimento con OpenAI
-ANTHROPIC_API_KEY=sk-ant-... # Solo necesario si usas provider: "anthropic"
+OPENAI_API_KEY=sk-...       # Required for OpenAI-backed experiments
+ANTHROPIC_API_KEY=sk-ant-... # Only if you use provider: "anthropic"
 ```
 
-**Importante:** `.env` está en `.gitignore`. Nunca lo subas al repositorio.
+**Important:** `.env` is in `.gitignore`. Never commit it.
 
 ---
 
-## 9. Cómo ejecutar un experimento
+## 9. How to run an experiment
 
-### Experimento real (requiere API key)
+### Real experiment (requires API key)
 
 ```bash
 python run_experiment.py --config configs/experiments/react_hotpotqa.yaml
 ```
 
-### Dry run (valida el config sin llamar a ninguna API)
+### Dry run (validates config without calling any API)
 
 ```bash
 python run_experiment.py --config configs/experiments/react_hotpotqa.yaml --dry-run
 ```
 
-Esto muestra un resumen del experimento y termina sin ejecutar nada:
+Prints a summary and exits:
 
 ```
 ╭─────────────── Agent Benchmark Suite ───────────────╮
@@ -437,60 +437,60 @@ Esto muestra un resumen del experimento y termina sin ejecutar nada:
 Dry run — config valid, exiting.
 ```
 
-### Tests (sin API key, completamente offline)
+### Tests (no API key, fully offline)
 
 ```bash
-# Todos los tests
+# All tests
 python3 -m pytest
 
-# Solo tests unitarios
+# Unit tests only
 python3 -m pytest tests/unit/
 
-# Solo el smoke test de integración
+# Integration smoke test only
 python3 -m pytest tests/integration/
 
-# Con salida detallada
+# Verbose
 python3 -m pytest -v
 
-# Sólo los tests de un módulo específico
+# Single module
 python3 -m pytest tests/unit/test_llm_judge.py -v
 ```
 
-### Dónde aparecen los resultados
+### Where results appear
 
-Después de un run real se crea automáticamente:
+After a real run:
 
 ```
 results/
 └── react_hotpotqa_gpt4o_v1__20260422T143022__3f8a1c2b/
-    ├── config.yaml        ← snapshot del YAML exacto usado
-    ├── metrics.json       ← todas las métricas en JSON
-    ├── report.md          ← tabla Markdown lista para GitHub
-    ├── trajectories.jsonl ← una línea por trajectory
-    └── traces.jsonl       ← una línea por paso de agente
+    ├── config.yaml        ← exact YAML snapshot
+    ├── metrics.json       ← all metrics as JSON
+    ├── report.md          ← Markdown table for GitHub
+    ├── trajectories.jsonl ← one line per trajectory
+    └── traces.jsonl       ← one line per agent step
 ```
 
 ---
 
-## 10. Qué hay que rellenar / configurar
+## 10. Configuration checklist
 
-### Obligatorio para correr experimentos reales
+### Required for real experiments
 
-| Qué | Dónde | Ejemplo |
+| What | Where | Example |
 |---|---|---|
-| API key de OpenAI | `.env` | `OPENAI_API_KEY=sk-proj-...` |
-| ID del experimento | Config YAML | `id: "mi_experimento_v1"` |
+| OpenAI API key | `.env` | `OPENAI_API_KEY=sk-proj-...` |
+| Experiment ID | YAML config | `id: "my_experiment_v1"` |
 
-### Para crear un experimento nuevo
+### Creating a new experiment
 
-1. Copia `configs/experiments/react_hotpotqa.yaml`
-2. Dale un `id` único (se usa como nombre de carpeta en results/)
-3. Cambia lo que quieras comparar (estrategia, modelo, n_samples, etc.)
-4. Ejecuta con `--config tu_nuevo_config.yaml`
+1. Copy `configs/experiments/react_hotpotqa.yaml`
+2. Give it a unique `id` (used under `results/`)
+3. Change what you want to compare (strategy, model, n_samples, …)
+4. Run with `--config your_new_config.yaml`
 
-### Para comparar dos estrategias
+### Comparing two strategies
 
-Crea dos YAMLs que sólo difieran en `agent.strategy`. El resto idéntico (misma semilla, mismas tareas, misma métrica). Ejemplo:
+Create two YAMLs that differ only in `agent.strategy`. Keep everything else identical (seed, tasks, metrics). Example:
 
 ```yaml
 # react_baseline.yaml
@@ -510,65 +510,65 @@ agent:
   ...
 ```
 
-Ejecuta los dos y compara sus `metrics.json`.
+Run both and compare `metrics.json`.
 
-### Para usar el juez LLM
+### Using the LLM judge
 
-Añade al YAML:
+Add to YAML:
 
 ```yaml
 evaluation:
   validator: "llm_judge"
-  llm_judge_model: "claude-opus-4-7"   # modelo DIFERENTE al que se evalúa
+  llm_judge_model: "claude-opus-4-7"   # model DIFFERENT from the one being evaluated
 ```
 
-Y asegúrate de tener `ANTHROPIC_API_KEY` en `.env` si usas Claude como juez.
+Ensure `ANTHROPIC_API_KEY` is in `.env` if the judge is Claude.
 
 ---
 
-## 11. Referencia completa de configuración YAML
+## 11. Full YAML configuration reference
 
-Los YAMLs de experimento se fusionan con `configs/base_config.yaml`. Los campos del experimento sobreescriben los defaults.
+Experiment YAMLs are merged with `configs/base_config.yaml`. Experiment fields override defaults.
 
 ```yaml
 experiment:
-  id: "nombre_unico"          # OBLIGATORIO. Identifica el run. No usar espacios.
-  seed: 42                    # Semilla global. Afecta al shuffle de tareas y al LLM.
-  n_trials: 5                 # Cuántas veces repetir cada tarea. Necesario para pass@k.
-  max_steps: 25               # Máximo de pasos ReAct por trial. Evita bucles infinitos.
-  output_dir: "results/"      # Dónde guardar los resultados.
-  tags: ["react", "v1"]       # Etiquetas libres para organizar experimentos.
+  id: "unique_name"           # REQUIRED. Run identifier. Avoid spaces.
+  seed: 42                    # Global seed. Affects task shuffle and LLM sampling.
+  n_trials: 5                 # Repeats per task. Needed for pass@k.
+  max_steps: 25               # Max ReAct steps per trial. Prevents infinite loops.
+  output_dir: "results/"      # Where to write outputs.
+  tags: ["react", "v1"]       # Free-form tags for organization.
 
 agent:
   strategy: "react"           # "direct" | "react" | "reflexion" | "plan_execute" | "tot"
   llm:
     provider: "openai"        # "openai" | "anthropic" | "local"
-    model: "gpt-4o"           # Nombre del modelo (gpt-4o, gpt-4o-mini, claude-opus-4-7...)
-    temperature: 0.0          # 0.0 para reproducibilidad. > 0 para muestreo estocástico.
-    max_tokens: 1024          # Límite de tokens de salida por llamada.
+    model: "gpt-4o"           # Model name (gpt-4o, gpt-4o-mini, claude-opus-4-7...)
+    temperature: 0.0          # 0.0 for reproducibility; > 0 for stochastic sampling.
+    max_tokens: 1024          # Max output tokens per call.
   memory:
     type: "no_memory"         # "no_memory" | "window_buffer" | "episodic" | "vector_store"
-    window_size: 10           # Solo para window_buffer: número de pasos a recordar.
-    top_k: 5                  # Solo para vector_store: k más cercanos.
+    window_size: 10           # window_buffer only: how many steps to retain.
+    top_k: 5                  # vector_store only: nearest neighbors.
   tools:
-    - name: "search"          # Nombre de la herramienta (debe estar en src/tools/).
-      config:
-        engine: "duckduckgo"  # Configuración específica de la herramienta.
-        max_results: 3
-    - name: "calculator"      # Sin config adicional.
-    - name: "finish"          # SIEMPRE incluir finish si usas ReAct.
+    # Benchmark runs register `search` as MockSearchTool (fixtures/search_responses.json).
+    # Extra keys in config are ignored; use fixture_path to override the JSON file.
+    - name: "search"
+      config: {}
+    - name: "calculator"
+    - name: "finish"          # Always include finish for ReAct.
 
 tasks:
-  dataset: "hotpotqa"         # Dataset a usar. Debe estar registrado en TASK_REGISTRY.
+  dataset: "hotpotqa"         # Must exist in TASK_REGISTRY.
   split: "validation"         # "train" | "validation" | "test"
-  n_samples: 100              # Número de tareas a evaluar. Más = más caro pero más fiable.
-  filter:                     # (Opcional) Filtrar por metadatos de la tarea.
-    difficulty: ["hard"]      # Solo tareas difíciles.
+  n_samples: 100              # Number of tasks. More = more cost, more stable stats.
+  filter:                     # (Optional) Filter by task metadata.
+    difficulty: ["hard"]      # Hard tasks only.
 
 evaluation:
   validator: "fuzzy_match"    # "exact_match" | "fuzzy_match" | "llm_judge"
-  llm_judge_model: null       # Solo si validator="llm_judge". Modelo para el juez.
-  metrics:                    # Lista de métricas a calcular.
+  llm_judge_model: null       # Only if validator="llm_judge". Judge model id.
+  metrics:                    # Metrics to compute.
     - "success_rate"
     - "pass_at_k"
     - "tokens_per_task"
@@ -576,21 +576,21 @@ evaluation:
     - "tool_accuracy"
     - "failure_recovery"
     - "latency"
-  pass_k_values: [1, 3, 5]    # Para qué valores de k calcular pass@k.
+  pass_k_values: [1, 3, 5]    # k values for pass@k.
 
 logging:
   level: "INFO"               # "DEBUG" | "INFO" | "WARNING"
-  save_traces: true           # Si false, no escribe traces.jsonl (más rápido, menos disco).
-  trace_format: "jsonl"       # Solo "jsonl" soportado por ahora.
+  save_traces: true           # If false, skips traces.jsonl (faster, less disk).
+  trace_format: "jsonl"       # Only "jsonl" supported for now.
 ```
 
 ---
 
-## 12. Qué se guarda en los resultados
+## 12. What is saved in the results
 
 ### `trajectories.jsonl`
 
-Una línea JSON por trajectory completada. Cada línea es un objeto con:
+One JSON object per line, one line per completed trajectory:
 
 ```json
 {
@@ -599,8 +599,8 @@ Una línea JSON por trajectory completada. Cada línea es un objeto con:
   "agent_id": "react__no_memory__gpt-4o",
   "trial_num": 0,
   "seed": 42,
-  "config_hash": "3f8a1c2b...",   // SHA-256 del config completo
-  "steps": [...],                  // Lista de pasos
+  "config_hash": "3f8a1c2b...",   // SHA-256 of full config
+  "steps": [...],                  // Step list
   "termination": "success",        // "success" | "max_steps" | "parse_error" | "llm_error"
   "final_answer": "William Shakespeare",
   "total_tokens": 1247,
@@ -612,7 +612,7 @@ Una línea JSON por trajectory completada. Cada línea es un objeto con:
 
 ### `traces.jsonl`
 
-Una línea JSON por **paso** del agente (más granular). Solo si `save_traces: true`. Útil para debugging y análisis de comportamiento.
+One JSON line per **agent step** (finer granularity). Only if `save_traces: true`. Useful for debugging and behavior analysis.
 
 ### `metrics.json`
 
@@ -640,7 +640,7 @@ Una línea JSON por **paso** del agente (más granular). Solo si `save_traces: t
 
 ### `report.md`
 
-Tabla Markdown lista para GitHub. Ejemplo:
+GitHub-ready Markdown table. Example:
 
 ```markdown
 # Experiment: react_hotpotqa_gpt4o_v1
@@ -657,118 +657,118 @@ Tabla Markdown lista para GitHub. Ejemplo:
 
 ---
 
-## 13. Cómo añadir cosas nuevas
+## 13. How to extend the codebase
 
-### Añadir un nuevo dataset
+### Add a dataset
 
-1. Crea `src/tasks/loaders/mi_dataset.py`:
+1. Create `src/tasks/loaders/my_dataset.py`:
 
 ```python
 from src.tasks.base import TaskLoader
 from src.schema import TaskInstance
 
-class MiDatasetLoader(TaskLoader):
+class MyDatasetLoader(TaskLoader):
     @property
     def name(self) -> str:
-        return "mi_dataset"
+        return "my_dataset"
 
     def load(self, split, n_samples, seed, filter_kwargs=None):
-        # Cargar datos y devolver List[TaskInstance]
+        # Load data and return List[TaskInstance]
         ...
 ```
 
-2. Registra en `src/tasks/loaders/__init__.py`:
+2. Register in `src/tasks/loaders/__init__.py`:
 
 ```python
-from src.tasks.loaders.mi_dataset import MiDatasetLoader
-TASK_REGISTRY.register("mi_dataset", MiDatasetLoader)
+from src.tasks.loaders.my_dataset import MyDatasetLoader
+TASK_REGISTRY.register("my_dataset", MyDatasetLoader)
 ```
 
-3. Úsalo en el YAML: `dataset: "mi_dataset"`.
+3. Use in YAML: `dataset: "my_dataset"`.
 
-### Añadir una nueva estrategia
+### Add a strategy
 
-1. Crea `src/strategies/mi_estrategia.py` implementando `PlanningStrategy`:
+1. Create `src/strategies/my_strategy.py` implementing `PlanningStrategy`:
    - `build_prompt(state, memory_context, tool_descriptions) -> str`
-   - `parse_response(raw, state) -> Action` — **nunca debe lanzar excepciones**
+   - `parse_response(raw, state) -> Action` — **must not raise** (handle errors in-band)
    - `name` property
 
-2. Registra en `src/strategies/factory.py`.
+2. Register in `src/strategies/factory.py`.
 
-3. Añade el nombre al `Literal` en `src/config.py` → `AgentConfig.strategy`.
+3. Add the name to the `Literal` in `src/config.py` → `AgentConfig.strategy`.
 
-### Añadir una nueva herramienta
+### Add a tool
 
-1. Crea `src/tools/mi_herramienta.py` heredando de `BaseTool`.
+1. Create `src/tools/my_tool.py` subclassing `BaseTool`.
 
-2. Registra en `src/tools/factory.py`.
+2. Register in `src/tools/factory.py`.
 
-3. Úsala en el YAML: `tools: [{name: "mi_herramienta"}]`.
+3. Use in YAML: `tools: [{name: "my_tool"}]`.
 
-### Añadir una nueva métrica
+### Add a metric
 
-1. Crea `src/evaluation/metrics/mi_metrica.py` implementando `Metric`:
+1. Create `src/evaluation/metrics/my_metric.py` implementing `Metric`:
    - `name` property
    - `compute(trajectories, tasks) -> MetricResult`
 
-2. Registra en `src/evaluation/metrics/__init__.py`:
+2. Register in `src/evaluation/metrics/__init__.py`:
 
 ```python
-from src.evaluation.metrics.mi_metrica import MiMetrica
-METRIC_REGISTRY.register(MiMetrica)
+from src.evaluation.metrics.my_metric import MyMetric
+METRIC_REGISTRY.register(MyMetric)
 ```
 
-3. Úsala en el YAML: `metrics: ["mi_metrica"]`.
+3. Use in YAML: `metrics: ["my_metric"]`.
 
 ---
 
 ## 14. Tests
 
-El suite tiene 152 tests (sin contar los tuyos propios). Se pueden correr todos offline — ningún test hace llamadas reales a APIs.
+The suite has **152** collected tests—all runnable offline; none call real APIs.
 
 ```bash
-python3 -m pytest                    # todos
-python3 -m pytest tests/unit/        # solo unitarios
-python3 -m pytest tests/integration/ # solo integración
-python3 -m pytest -v --tb=short      # verbose con traceback corto
+python3 -m pytest                    # all
+python3 -m pytest tests/unit/        # unit only
+python3 -m pytest tests/integration/ # integration only
+python3 -m pytest -v --tb=short      # verbose, short traceback
 ```
 
-La cobertura por módulo:
+Coverage by test file:
 
-| Fichero de test | Qué prueba |
+| Test file | What it covers |
 |---|---|
-| `test_schema.py` | Serialización/deserialización de todos los modelos Pydantic |
-| `test_config.py` | load_config, deep merge, config_hash determinista |
+| `test_schema.py` | Pydantic model serialization |
+| `test_config.py` | load_config, deep merge, deterministic config_hash |
 | `test_agent.py` | BaseAgent: act(), observe(), memory wiring, agent_id |
-| `test_react_strategy.py` | Parser de Thought/Action/Action Input, casos borde |
+| `test_react_strategy.py` | Thought/Action/Action Input parser, edge cases |
 | `test_tools.py` | search (offline fixture), calculator (allowlist), finish |
-| `test_tools_base.py` | ToolRegistry: validate_and_execute, herramienta desconocida |
-| `test_execution_engine.py` | Bucle de pasos, terminación por max_steps/abort/success |
+| `test_tools_base.py` | ToolRegistry: validate_and_execute, unknown tool |
+| `test_execution_engine.py` | Step loop, termination on max_steps/abort/success |
 | `test_trace_logger.py` | JSONL output, crash-safety, round-trip load |
 | `test_evaluation.py` | Validators (exact/fuzzy), PassAtK, SuccessRate, EvaluationModule |
 | `test_metrics_phase5.py` | StepCount, ToolAccuracy, FailureRecovery, Latency |
-| `test_llm_judge.py` | Parser de scores, mitigación de sesgo, robustez ante fallos |
-| `test_react_smoke.py` | Pipeline completo con LLM mockeado (end-to-end) |
+| `test_llm_judge.py` | Score parsing, bias mitigation, failure robustness |
+| `test_react_smoke.py` | End-to-end pipeline with mocked LLM |
 
 ---
 
-## 15. Papers de referencia
+## 15. Reference papers
 
-Cada decisión de diseño está justificada por investigación publicada:
+Design choices map to published work:
 
-| Paper | Cita | Relevancia en el código |
+| Paper | Citation | Relevance in code |
 |---|---|---|
 | ReAct | Yao et al., ICLR 2023. arXiv:2210.03629 | `src/strategies/react.py` |
 | Reflexion | Shinn et al., NeurIPS 2023. arXiv:2303.11366 | `src/memory/episodic.py`, `EpisodicMemory.reset()` no-op |
-| Plan-and-Solve | Wang et al., ACL 2023. arXiv:2305.04091 | `src/strategies/` (pendiente) |
-| Tree of Thoughts | Yao et al., NeurIPS 2023. arXiv:2305.10601 | `src/strategies/` (pendiente) |
+| Plan-and-Solve | Wang et al., ACL 2023. arXiv:2305.04091 | `src/strategies/` (planned) |
+| Tree of Thoughts | Yao et al., NeurIPS 2023. arXiv:2305.10601 | `src/strategies/` (planned) |
 | Toolformer | Schick et al., NeurIPS 2023. arXiv:2302.04761 | `src/tools/base.py`, ToolRegistry |
 | HotPotQA | Yang et al., EMNLP 2018 | `src/tasks/loaders/hotpotqa.py` |
 | SQuAD token F1 | Rajpurkar et al., 2016 | `src/evaluation/validators/fuzzy_match.py` |
 | Pass@k formula | Chen et al., 2021 / Shinn et al., 2023 | `src/evaluation/metrics/pass_at_k.py` |
 | HELM | Liang et al., 2022. arXiv:2211.09110 | Multi-metric design, `EvaluationModule` |
-| AgentBench | Liu et al., ICLR 2024. arXiv:2308.03688 | Arquitectura general del benchmark |
+| AgentBench | Liu et al., ICLR 2024. arXiv:2308.03688 | Overall benchmark architecture |
 | WebArena | Zhou et al., 2023. arXiv:2307.13854 | Reproducibility-first: config_hash, seed |
 | MT-Bench / LLM Judge | Zheng et al., NeurIPS 2023. arXiv:2306.05685 | `src/evaluation/validators/llm_judge.py` |
-| Positional bias | Wang et al., 2023. arXiv:2309.03882 | Prompt ordering en LLMJudgeValidator |
-| Verbosity bias | Dubois et al., 2024. arXiv:2404.04475 | Templates del juez LLM |
+| Positional bias | Wang et al., 2023. arXiv:2309.03882 | Prompt ordering in LLMJudgeValidator |
+| Verbosity bias | Dubois et al., 2024. arXiv:2404.04475 | LLM judge templates |
