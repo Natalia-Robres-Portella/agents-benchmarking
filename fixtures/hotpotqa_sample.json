@@ -1,0 +1,22 @@
+[
+  {"id": "fixture_001", "question": "What is the capital of France?", "answer": "Paris", "type": "bridge", "level": "easy"},
+  {"id": "fixture_002", "question": "Who invented the telephone?", "answer": "Alexander Graham Bell", "type": "bridge", "level": "easy"},
+  {"id": "fixture_003", "question": "In what year was the Eiffel Tower completed?", "answer": "1889", "type": "bridge", "level": "easy"},
+  {"id": "fixture_004", "question": "What is the chemical symbol for gold?", "answer": "Au", "type": "bridge", "level": "easy"},
+  {"id": "fixture_005", "question": "Who painted the Sistine Chapel ceiling?", "answer": "Michelangelo", "type": "bridge", "level": "easy"},
+  {"id": "fixture_006", "question": "What year did World War II end?", "answer": "1945", "type": "bridge", "level": "easy"},
+  {"id": "fixture_007", "question": "Who wrote Pride and Prejudice?", "answer": "Jane Austen", "type": "bridge", "level": "easy"},
+  {"id": "fixture_008", "question": "What is the largest planet in our solar system?", "answer": "Jupiter", "type": "comparison", "level": "easy"},
+  {"id": "fixture_009", "question": "In what country is the Great Wall located?", "answer": "China", "type": "bridge", "level": "easy"},
+  {"id": "fixture_010", "question": "Who discovered penicillin?", "answer": "Alexander Fleming", "type": "bridge", "level": "easy"},
+  {"id": "fixture_011", "question": "What is the boiling point of water in Celsius?", "answer": "100", "type": "bridge", "level": "medium"},
+  {"id": "fixture_012", "question": "Who wrote Romeo and Juliet?", "answer": "William Shakespeare", "type": "bridge", "level": "medium"},
+  {"id": "fixture_013", "question": "What is the smallest country in the world by area?", "answer": "Vatican City", "type": "comparison", "level": "medium"},
+  {"id": "fixture_014", "question": "In what year did the Berlin Wall fall?", "answer": "1989", "type": "bridge", "level": "medium"},
+  {"id": "fixture_015", "question": "What is the hardest natural substance?", "answer": "diamond", "type": "bridge", "level": "medium"},
+  {"id": "fixture_016", "question": "Who was the first person to walk on the moon?", "answer": "Neil Armstrong", "type": "bridge", "level": "medium"},
+  {"id": "fixture_017", "question": "Who composed the Fifth Symphony?", "answer": "Ludwig van Beethoven", "type": "bridge", "level": "hard"},
+  {"id": "fixture_018", "question": "What element has the atomic number 1?", "answer": "hydrogen", "type": "bridge", "level": "hard"},
+  {"id": "fixture_019", "question": "What is the largest ocean on Earth?", "answer": "Pacific Ocean", "type": "comparison", "level": "hard"},
+  {"id": "fixture_020", "question": "What was the name of the ship that sank on its maiden voyage in 1912?", "answer": "Titanic", "type": "bridge", "level": "hard"}
+]

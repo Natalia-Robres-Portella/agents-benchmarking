@@ -1,0 +1,19 @@
+# Config + validation
+pydantic>=2.7,<3.0
+pyyaml>=6.0,<7.0
+
+# LLM
+openai>=1.30,<2.0
+
+# Data
+datasets>=2.19,<3.0
+
+# Tools
+duckduckgo-search>=6.0
+
+# Output + UX
+rich>=13.0,<14.0
+click>=8.1,<9.0
+
+# Reliability
+tenacity>=8.3,<9.0
