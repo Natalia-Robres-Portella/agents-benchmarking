@@ -42,7 +42,9 @@ another Thought / Action / Action Input.
 When you have the final answer call the finish tool:
 Thought: I now know the final answer.
 Action: finish
-Action Input: {{"answer": "<your answer>"}}
+Action Input: {{"answer": "<concise answer: a name, year, place, or short phrase — NOT a full sentence>"}}
+
+Important: the answer field must be a short extract, never a complete sentence.
 
 Begin!
 """
