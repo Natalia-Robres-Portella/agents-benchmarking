@@ -70,9 +70,9 @@ The framework compares agents along **four independent axes** you can mix freely
 |---|---|---|
 | `direct` | Implemented | No tools. The model answers directly. Baseline. |
 | `react` | Implemented | Thought → Action → Observation loop (Yao et al., 2023). |
-| `reflexion` | Planned | ReAct + verbal reflection across trials (Shinn et al., 2023). |
-| `plan_execute` | Planned | Full plan before execution (Wang et al., 2023). |
-| `tot` | Planned | Tree of Thoughts: multiple reasoning branches (Yao et al., 2023). |
+| `reflexion` | Implemented | ReAct + verbal reflection across trials (Shinn et al., 2023). |
+| `plan_execute` | Implemented | Full plan before execution (Wang et al., 2023). |
+| `tot` | Implemented | Tree of Thoughts: multiple reasoning branches (Yao et al., 2023). |
 
 ### Axis 2 — Memory type
 
